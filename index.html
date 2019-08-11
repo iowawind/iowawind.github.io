@@ -1,3 +1,21 @@
+<div id="floating-panel">
+  <Label id="stid">Street Address </Label><input id="address" type="textbox" value="100 main">
+  <Label id="zipid">ZIP </Label><input id="zipcode" type="number" pattern="[0-9]{5}" value="52361" title="Five digit zip code" maxlength="4" size="4" />
+  <input id="submit" type="button" value="Find Wind Turbines Near Me">
+  <Label id="latid">Latitude </Label><input id="latbox" type="textbox" value="41.6911" maxlength="9" size="9" >
+  <Label id="lngid">Longitude </Label><input id="lngbox" type="number" value="-92.1691" maxlength="9" size="9" />
+  <input id="submitlat" type="button" value="Find Wind Turbines Near Me">
+  <br/>
+  <input id="showother" type="button" onclick="toggle()" value="Search by Lat Long Instead">
+</div>
+<div class="form-popup" id="results">
+  <form action="/action_page.php" class="form-container">
+    <div id='resultdisp'>
+	<h1>Nearest:</h1>
+	</div>
+    <button type="button" class="btn cancel" onclick="closeForm()">Close</button>
+  </form>
+</div>
 <div id="map"></div>
 <!-- Replace the value of the key parameter with your own API key. -->
 <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBf7n1IAZPvdFuMxbZjE6B2l5hNz4aG5eQ&callback=initMap">
@@ -5,17 +23,49 @@
 
 </script>
 <script type="text/javascript">
-alert("This website was last update 9/19/2019. The markers reperesent turbines listed in the site plan http://www.co.iowa.ia.us/bosinfo/wind%20documents/Diamond%20Trail%20Wind_Turbine%20Overview_07.17.2019.pdf\n\nThe materials on this website are provided on an as is basis, without warranty of any kind, either express or implied, including without limitation, warranties of merchantability, fitness for a particular purpose, and non-infringement. This website specifically does not make any warranties or representations as to the appropriateness, quality, timeliness, accuracy or completeness of the materials.");
+alert("This website was last update 9/19/2019. The markers reperesent turbines listed in the site plan https://www.co.iowa.ia.us/bosinfo/wind%20documents/Diamond%20Trail%20Wind_Turbine%20Overview_07.17.2019.pdf\n\nThe materials on this website are provided on an as is basis, without warranty of any kind, either express or implied, including without limitation, warranties of merchantability, fitness for a particular purpose, and non-infringement. This website specifically does not make any warranties or representations as to the appropriateness, quality, timeliness, accuracy or completeness of the materials.");
 </script>
 <script>
 var map;
+markerList = [];
+mainMarker = [];
+document.getElementById('latbox').style.display = 'none';
+document.getElementById('lngbox').style.display = 'none';
+document.getElementById('latid').style.display = 'none';
+document.getElementById('lngid').style.display = 'none';
+document.getElementById('submitlat').style.display = 'none';
+function toggle(){
+	if (document.getElementById('showother').value.includes('Lat'))
+	{
+		var latlngvis = '';
+		var stvis = 'none'
+		document.getElementById('showother').value = 'Search by Address Instead'
+	}
+	else
+	{
+		var latlngvis = 'none';
+		var stvis = ''
+		document.getElementById('showother').value = 'Search by Lat Long Instead'
+	}
+	document.getElementById('latbox').style.display = latlngvis;
+	document.getElementById('lngbox').style.display = latlngvis;
+	document.getElementById('latid').style.display = latlngvis;
+	document.getElementById('lngid').style.display = latlngvis;
+	document.getElementById('submitlat').style.display = latlngvis;
+	
+	document.getElementById('address').style.display = stvis;
+	document.getElementById('zipcode').style.display = stvis;
+	document.getElementById('stid').style.display = stvis;
+	document.getElementById('zipid').style.display = stvis;
+	document.getElementById('submit').style.display = stvis;
+}
 
 
 function initMap() {
   map = new google.maps.Map(
     document.getElementById('map'), {
-      center: new google.maps.LatLng(41.6611, -92.0091),
-      zoom: 10
+      center: new google.maps.LatLng(41.6911, -92.1691),
+      zoom: 13
     });
 
 
@@ -371,12 +421,137 @@ function initMap() {
     var marker = new google.maps.Marker({
       position: features[i].position,
       title: "Proposed Windmill " + features[i].id,
-      map: map
+      map: map,
+      icon: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png'
     });
+	markerList.push(marker)
     
   };
+  var geocoder = new google.maps.Geocoder();
+  document.getElementById('submit').addEventListener('click', function() {
+    geocodeAddress(geocoder, map);
+  }); 
+  document.getElementById('submitlat').addEventListener('click', function() {
+    console.log('a')
+	setPoint(new google.maps.LatLng(parseFloat(document.getElementById('latbox').value), parseFloat(document.getElementById('lngbox').value)));
+  }); 
+}
+//This function takes in latitude and longitude of two location and returns the distance between them as the crow flies (in km)
+function calcCrow(latlon1, latlon2) 
+{
+  var lat1 = latlon1.lat();
+  var lat2 = latlon2.lat();
+  var lon1 = latlon1.lng();
+  var lon2 = latlon2.lng();
+  var R = 6371; // km
+  var dLat = toRad(lat2-lat1);
+  var dLon = toRad(lon2-lon1);
+  var lat1 = toRad(lat1);
+  var lat2 = toRad(lat2);
+
+  var a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.sin(dLon/2) * Math.sin(dLon/2) * Math.cos(lat1) * Math.cos(lat2); 
+  var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
+  var d = R * c;
+  return d;
 }
 
+// Converts numeric degrees to radians
+function toRad(Value) 
+{
+    return Value * Math.PI / 180;
+}
+function round(value, precision) {
+    var multiplier = Math.pow(10, precision || 0);
+    return Math.round(value * multiplier) / multiplier;
+}
+function geocodeAddress(geocoder, resultsMap) {
+  var address = document.getElementById('address').value + ' ' + document.getElementById('zipcode').value;
+  geocoder.geocode({'address': address}, function(results, status) {
+    if (status === 'OK') {
+		setPoint(results[0].geometry.location)
+    } else {
+      alert('Geocode was not successful for the following reason: ' + status);
+    }
+  });
+}
+function setPoint(latlng){
+  map.setCenter(latlng);
+  points = findNearest(latlng);
+  points.sort(function(first, second) {
+	return first['dist'] - second['dist'];
+	});
+  htmltable = '<h1>Nearest 10</h1><table style="width:100%"><tr><th>ID</th><th>Distance</th></tr>';
+  var total = 10;
+  if (total > markerList.length)
+  {
+     total = markerList.length;
+  }  
+  for (var i = 0; i < total; i++)
+  {
+	htmltable = htmltable + '<tr><th>' + points[i]['des'] + '</th><th>' + points[i]['real_dist'] + '</th></tr>';
+  }
+  htmltable = htmltable + '</table>';
+  document.getElementById('resultdisp').innerHTML = htmltable;
+  openForm();
+  if (mainMarker.length == 0)
+  {
+	var marker = new google.maps.Marker({
+		map: map,
+		position: latlng,
+		icon: 'https://maps.google.com/mapfiles/ms/micons/POI.png'
+	});
+	mainMarker.push(marker)
+  }
+  else
+  {
+	mainMarker[0].setPosition(latlng)
+  }
+}
+function findNearest(latlng){
+	returnList = []
+	for (var i = 0; i < markerList.length; i++) {
+		var distance = calcCrow(markerList[i].position,latlng) * 0.621371;		
+		var dict = {};
+		markerList[i].setTitle(markerList[i].getTitle().split('\n',1)[0] + '\nDistance Away: ' + round(distance, 2) + ' miles')
+		var real_dist = round(distance, 2) + ' miles'
+		if (distance>=10)
+		{
+			markerList[i].setIcon('https://maps.google.com/mapfiles/ms/icons/green-dot.png')
+		}
+		else if (distance>=5)
+		{
+			markerList[i].setIcon('https://maps.google.com/mapfiles/ms/icons/pink-dot.png')
+		}
+		else if (distance>=2.5)
+		{
+			markerList[i].setIcon('https://maps.google.com/mapfiles/ms/icons/yellow-dot.png')
+		}
+		else if (distance>=1)
+		{
+			markerList[i].setIcon('https://maps.google.com/mapfiles/ms/icons/orange-dot.png')
+		}
+		else
+		{
+			var feet = distance*5280;
+			markerList[i].setTitle(markerList[i].getTitle().split('\n',1)[0] + '\nDistance Away: ' + round(feet, 0) + ' feet')
+			markerList[i].setIcon('https://maps.google.com/mapfiles/ms/icons/red-dot.png')
+			real_dist = round(feet, 0) + ' feet'
+		}
+		dict['dist'] = distance;
+		dict['des'] = "ID: " + markerList[i].getTitle().split('-OE',1)[0].split('WTE-',2)[1];
+		dict['real_dist'] = real_dist
+		returnList.push(dict)
+	};
+	return returnList;
+}
+function openForm() {
+  document.getElementById("results").style.display = "block";
+}
+
+function closeForm() {
+  document.getElementById("results").style.display = "none";
+}
 </script>
 <style>
 /* Always set the map height explicitly to define the size of the div
@@ -394,5 +569,99 @@ body {
   margin: 0;
   padding: 0;
 }
+#floating-panel {
+  position: absolute;
+  top: 10px;
+  left: 25%;
+  z-index: 5;
+  background-color: #fff;
+  padding: 5px;
+  border: 1px solid #999;
+  text-align: center;
+  font-family: 'Roboto','sans-serif';
+  line-height: 30px;
+  padding-left: 10px;
+}
+/* The popup form - hidden by default */
+.open-button {
+  background-color: #555;
+  color: white;
+  padding: 16px 20px;
+  border: none;
+  cursor: pointer;
+  opacity: 0.8;
+  position: fixed;
+  bottom: 23px;
+  right: 28px;
+  width: 280px;
+}
 
+/* The popup form - hidden by default */
+.form-popup {
+  display: none;
+  position: fixed;
+  bottom: 0;
+  right: 15px;
+  border: 3px solid #f1f1f1;
+  z-index: 9;
+}
+
+/* Add styles to the form container */
+.form-container {
+  max-width: 300px;
+  padding: 10px;
+  background-color: white;
+}
+
+/* Full-width input fields */
+.form-container input[type=text], .form-container input[type=password] {
+  width: 100%;
+  padding: 15px;
+  margin: 5px 0 22px 0;
+  border: none;
+  background: #f1f1f1;
+}
+
+/* When the inputs get focus, do something */
+.form-container input[type=text]:focus, .form-container input[type=password]:focus {
+  background-color: #ddd;
+  outline: none;
+}
+
+/* Set a style for the submit/login button */
+.form-container .btn {
+  background-color: #4CAF50;
+  color: white;
+  padding: 16px 20px;
+  border: none;
+  cursor: pointer;
+  width: 100%;
+  margin-bottom:10px;
+  opacity: 0.8;
+}
+
+/* Add a red background color to the cancel button */
+.form-container .cancel {
+  background-color: red;
+}
+
+/* Add some hover effects to buttons */
+.form-container .btn:hover, .open-button:hover {
+  opacity: 1;
+}
+table {
+  font-family: arial, sans-serif;
+  border-collapse: collapse;
+  width: 100%;
+}
+
+td, th {
+  border: 1px solid #dddddd;
+  text-align: left;
+  padding: 8px;
+}
+
+tr:nth-child(even) {
+  background-color: #dddddd;
+}
 </style>
