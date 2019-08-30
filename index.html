@@ -555,6 +555,7 @@ function closeForm() {
 }
 </script>
 <style>
+
 /* Always set the map height explicitly to define the size of the div
  * element that contains the map. */
 
@@ -571,9 +572,6 @@ body {
   padding: 0;
 }
 #floating-panel {
-  position: absolute;
-  top: 10px;
-  left: 25%;
   z-index: 5;
   background-color: #fff;
   padding: 5px;
@@ -582,6 +580,12 @@ body {
   font-family: 'Roboto','sans-serif';
   line-height: 30px;
   padding-left: 10px;
+background: #555;
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    top: 80%;
 }
 /* The popup form - hidden by default */
 .open-button {
@@ -665,4 +669,5 @@ td, th {
 tr:nth-child(even) {
   background-color: #dddddd;
 }
+
 </style>
